@@ -1,0 +1,385 @@
+Binary Pam Simulation
+
+Task 1, bit rate = 1/Tp
+%% Define half pulse width (Tp) and sampling period (dt)
+Tp = 0.1;
+dt = Tp/50;
+% Define bit rate (fb) based on our choice 
+fb = 1/Tp; 
+% Symbol period (Ts) based on bit rate
+Ts = 1/fb;
+% Define time vector for pulse
+t = -5*Ts:dt:5*Ts;
+% Define time vector for bits
+t2 = 0:dt:(bitsT*Ts);
+
+% Define triangular pulse function
+%p_t = (1 - abs(t)/Tp).*(abs(t) < Tp);
+
+% Define truncated sinc pulse function
+p_t=sinc(t/Ts);
+
+%Define other pulse function...
+
+% Fourier Transform using FFT
+Nfft = 1024; % length of fft
+f = [0:fs/Nfft:fs-fs/Nfft]; 
+
+
+%Renamed N to bitsT
+bitsT=50;
+bits1 = 2*((rand(1,bitsT)>0.5)-0.5);
+bits2 = 2*((rand(1,bitsT)>0.5)-0.5);
+bits3 = 2*((rand(1,bitsT)>0.5)-0.5);
+
+
+t2 = 0:dt:(bitsT*Ts);
+
+% Base zero vector for bit insertion
+bSpaced1 = zeros(1, length(t2)); 
+
+% Loop for bit rate adjusted bit vector
+i = 1;
+j = 1;
+for loop_index = 0:length(bits1)-1 
+
+    bSpaced1(i) = bits1(j); 
+    i = round(Ts/dt)*j;    
+    j = j + 1;   
+end
+
+% Base zero vector for bit insertion
+bSpaced2 = zeros(1, length(t2)); 
+
+% Loop for bit rate adjusted bit vector
+i = 1;
+j = 1;
+for loop_index = 0:length(bits2)-1 
+
+    bSpaced2(i) = bits2(j); 
+    i = round(Ts/dt)*j;    
+    j = j + 1;   
+end
+
+% Base zero vector for bit insertion
+bSpaced3 = zeros(1, length(t2)); 
+
+% Loop for bit rate adjusted bit vector
+i = 1;
+j = 1;
+for loop_index = 0:length(bits3)-1 
+
+    bSpaced3(i) = bits3(j); 
+    i = round(Ts/dt)*j;    
+    j = j + 1;   
+end
+
+y_t1=conv(bSpaced1,p_t);
+y_t2=conv(bSpaced2,p_t);
+y_t3=conv(bSpaced3,p_t);
+
+tPlot=0:dt:dt*(length(y_t1)-1);
+
+
+Uf1=20; %Hz modulation
+wc1 = 2*pi*Uf; %Carrier Frequency
+Uy1 = y_t1.*cos(wc1*tPlot);
+
+Uf2=30; %Hz modulation
+wc2 = 2*pi*Uf2; %Carrier Frequency
+Uy2 = y_t2.*cos(wc2*tPlot);
+
+Uf3=40; %Hz modulation
+wc3 = 2*pi*Uf3; %Carrier Frequency
+Uy3 = y_t3.*cos(wc3*tPlot);
+
+yfinal=Uy1+Uy2+Uy3;
+
+% Noise standard deviation 
+sigma = 1;
+noise = sigma*randn(1,length(yfinal));
+
+
+% Received signal with noise
+r_t = yfinal + noise;
+
+%Down conversion
+Uf2=20; %Hz modulation
+wc2 = 2*pi*Uf2; %Carrier Frequency
+D_r=r_t.*cos(wc*tPlot)
+
+
+%Matched filter
+
+z_t=conv(D_r,p_t);
+matchedX=zeros(1,length(t2));
+i=1;
+j=1;
+for loop_index = 0:length(bitsT)-1
+
+if z_t(i)>0
+matchedX(i)=1;
+
+else 
+matchedX(i)=-1;
+    
+end
+i=j*round(Ts/dt);
+j=j+1;
+end
+
+
+Now We Plot our Data
+
+figure;
+subplot(2,1,1)
+plot(t,p_t)
+xlabel('Time (s)')
+ylabel('Pulse Amplitude')
+title('Triangular Pulse Shape')
+
+subplot(2,1,2)
+plot(f,abs(fft(x,Nfft)))
+xlabel('Frequency (Hz)')
+ylabel('Magnitude')
+title('Spectrum of Triangular Pulse (FFT)')
+
+figure;
+subplot(3,1,1)
+plot(tPlot,y_t1)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Noise Free Transmitted Signal 1')
+
+subplot(3,1,2)
+plot(tPlot,y_t2)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Noise Free Transmitted Signal 2')
+
+subplot(3,1,3)
+plot(tPlot,y_t3)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Noise Free Transmitted Signal 3')
+
+figure
+subplot(4,1,1)
+plot(tPlot,Uy1)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Up-Converted Noise Free Transmitted Signal 1')
+
+subplot(4,1,2)
+plot(tPlot,Uy2)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Up-Converted Noise Free Transmitted Signal 2')
+
+subplot(4,1,3)
+plot(tPlot,Uy3)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Up-Converted Noise Free Transmitted Signal 3')
+
+subplot(4,1,4)
+plot(tPlot,yfinal)
+xlabel('Time (s)')
+ylabel('Signal Amplitude')
+ylim([-2 2])
+title('Up-Converted Noise Free Transmitted Combined Signal')
+
+figure;
+plot(tPlot,r_t)
+xlabel('Time(s)')
+ylabel('Signal Amplitude')
+title('Noisy Received Signal')
+
+figure;
+plot(tPlot,D_r)
+xlabel('Time(s)')
+ylabel('Signal Amplitude')
+title('Down-Converted Signal')
+
+figure;
+subplot(2,1,1)
+plot(t2,bSpaced1+bSpaced2+bSpaced3)
+xlabel('Time(s)')
+ylabel('Signal Amplitude')
+title('Sent Message')
+
+subplot(2,1,2)
+plot(t2,matchedX)
+xlabel('Time(s)')
+ylabel('Signal Amplitude')
+title('Decoded Message')
+
+SNR = sum(y_t.^2) / sum(noise.^2);
+ER_sign = (sum(abs(bSpaced - signX)) / length(bSpaced));
+ER_Matched = (sum(abs(bSpaced - matchedX)) / length(bSpaced));
+
+fprintf('Bit Rate (Hz): %f\n', fb);
+fprintf('Noise Std. Dev. (sigma): %f\n', sigma);
+fprintf('SNR (dB): %.2f\n', SNR);
+fprintf('Error Rate (Sign-based): %f\n', ER_sign);
+fprintf('Error Rate (Matched Filter): %f\n', ER_Matched);
+
+
+
+Task 2: Performance Analysis
+%% Define half pulse width (Tp) and sampling period (dt)
+Tp = 0.1;
+dt = Tp/50;
+
+% Define time vector for pulse
+t = -Tp:dt:Tp;
+
+% Define triangular pulse function
+p_t = (1 - abs(t)/Tp).*(abs(t) < Tp);
+
+% Numerical approximation of Fourier Transform using FFT
+P_f = fft(p_t); 
+
+
+%Renamed N to bitsT and bits made constant to analyze sigma change. If this
+%is to be tested again, a new constant bits1 value will need to be made.
+%Some of the code below is commented out because the constant vectors no
+%longer exist.
+bitsT=50;
+%bits = bits1
+
+% Define bit rate (fb) based on our choice (1/Tp or 1/(2*Tp))
+fb = 1/Tp; 
+
+% Symbol period (Ts) based on bit rate
+Ts = 1/fb;
+t2 = 0:dt:(bitsT*Ts);
+
+% Base zero vector for bit insertion
+bSpaced = zeros(1, length(t2)); 
+
+% Loop for bit rate adjusted bit vector
+i = 1;
+j = 1;
+for loop_index = 0:length(bits)-1 
+
+    bSpaced(i) = bits(j); 
+    i = round(Ts/dt)*j;    
+    j = j + 1;   
+end
+
+y_t=conv(bSpaced,p_t);
+
+tPlot=0:dt:dt*(length(y_t)-1);
+
+% Noise standard deviation and random vector made constant to analyze sigma
+% change. If this is to be tested again, a new constant vec1 value will need to be made
+sigma = .0001;
+vec=randn(1,length(y_t));
+%vec1
+%noise = sigma*vec1;
+
+
+% Received signal with noise
+%r_t = y_t + noise;
+
+% Sign-based receiver
+signX=zeros(1,length(t2));
+i=1;
+j=1;
+for loop_index = 0:length(bits)-1
+
+if r_t(i)>0
+signX(i)=1;
+
+else 
+signX(i)=-1;
+    
+end
+i=j*round(Ts/dt);
+j=j+1;
+end
+
+%Matched filter
+
+z_t=conv(r_t,p_t);
+matchedX=zeros(1,length(t2));
+i=1;
+j=1;
+for loop_index = 0:length(bits)-1
+
+if z_t(i)>0
+matchedX(i)=1;
+
+
+
+else 
+matchedX(i)=-1;
+    
+end
+i=j*round(Ts/dt);
+j=j+1;
+end
+
+SNR = sum(y_t.^2) / sum(noise.^2);
+ER_sign = (sum(abs(bSpaced - signX)) / length(bSpaced));
+ER_Matched = (sum(abs(bSpaced - matchedX)) / length(bSpaced));
+
+fprintf('Bit Rate (Hz): %f\n', fb);
+fprintf('Noise Std. Dev. (sigma): %f\n', sigma);
+fprintf('SNR (dB): %.2f\n', SNR);
+fprintf('Error Rate (Sign-based): %f\n', ER_sign);
+fprintf('Error Rate (Matched Filter): %f\n', ER_Matched);
+
+
+
+By keeping random vectors constant, we can manually change the sigma value to see it's effect on the SNR and Error Rates
+%The below values were entered in manually from adjusting the sigma value
+SNR0 = Inf;
+ER_sign0 = 0.014394;
+ER_Matched0 = 0.018393;
+
+SNRsig2 = 18.89;
+ER_signsig2 = 0.013595;
+ER_Matchedsig2 = 0.018393;
+
+
+SNRsig4 = 4.72;
+ER_signsig4 = 0.013595;
+ER_Matchedsig4 = 0.018395;
+
+SNRsig6 = 2.10;
+ER_signsig6 = 0.014394;
+ER_Matchedsig6 = 0.018395;
+
+SNRsig8 = 1.18;
+ER_signsig8 = 0.014394;
+ER_Matchedsig8 = 0.018395;
+
+SNRsig1 = 0.76;
+ER_signsig1 = 0.017593;
+ER_Matchedsig1 = 0.018395;
+
+vecSError=[0.014394 0.013595 0.013595 0.014394 0.014394 0.017593];
+vecMError=[0.018393 0.018393 0.018393 0.018393 0.018393 0.018393];
+vecSNR=[inf 18.89 4.72 2.10 1.18 0.76];
+
+figure;
+hold on;
+plot(vecSNR,vecSError)
+plot(vecSNR, vecMError)
+xlabel('SNR')
+ylabel('Error Rate')
+title('Bit Rate: 1/(Tp)')
+legend('Sign-based Error Rate','Matched Filter Error Rate')
+
+%% All of the code works perfectly. By decreasing the bit rate by half, the error rate also almost decreases by half. I think I did everythi
+
+
+
